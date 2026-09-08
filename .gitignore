@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.cache/
+.env
+.env.*
+!.env.example
+*.tgz
+coverage/
+playwright-report/
+test-results/
+.serena/
+.playwright-mcp/
+.playwright-cli/
+output/
+
+packages/*/THIRD_PARTY_NOTICES.txt
+packages/*/LICENSE

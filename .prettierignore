@@ -1,0 +1,10 @@
+node_modules
+.cache
+**/dist
+package-lock.json
+infra/*.patch
+infra/private-projects.yaml
+output
+.playwright-mcp
+.playwright-cli
+.serena

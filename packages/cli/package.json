@@ -1,0 +1,30 @@
+{
+  "name": "@kurotch-homelab/agent-skills-cli",
+  "version": "0.2.0",
+  "description": "Install and manage Agent Skills from a configured portal",
+  "type": "module",
+  "bin": {
+    "sv-skills": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kurotch-homelab/agent-skills-portal.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
