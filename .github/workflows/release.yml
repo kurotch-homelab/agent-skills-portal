@@ -22,6 +22,7 @@ jobs:
         with:
           name: packages
           path: .cache/*.tgz
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: error
   compatibility:
