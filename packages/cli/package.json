@@ -1,6 +1,6 @@
 {
   "name": "@kurotch-homelab/agent-skills-cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Install and manage Agent Skills from a configured portal",
   "type": "module",
   "bin": {

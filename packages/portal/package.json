@@ -1,6 +1,6 @@
 {
   "name": "@kurotch-homelab/agent-skills-portal",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Build and verify an npm-lockfile-backed Agent Skills portal",
   "type": "module",
   "bin": {

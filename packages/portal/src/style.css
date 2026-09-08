@@ -12,6 +12,7 @@
 }
 body {
   margin: 0;
+  overflow-wrap: anywhere;
 }
 a {
   color: inherit;
@@ -38,11 +39,13 @@ footer {
   margin: auto;
 }
 header {
-  height: 100px;
+  min-height: 100px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 48px;
+  padding: 20px 48px;
+  gap: 16px 24px;
+  flex-wrap: wrap;
   border-bottom: 1px solid #dce3d9;
 }
 .brand {
@@ -52,8 +55,11 @@ header {
   font-size: 20px;
   font-weight: 650;
   letter-spacing: -0.6px;
+  min-width: 0;
+  max-width: 100%;
 }
 .brand-mark {
+  flex-shrink: 0;
   display: grid;
   place-items: center;
   background: #204e3e;
@@ -77,6 +83,12 @@ nav {
   gap: 30px;
   align-items: center;
   font-size: 13px;
+  flex-wrap: wrap;
+}
+nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 nav a span {
   margin-left: 8px;
@@ -103,7 +115,7 @@ main {
 }
 .hero {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: 35px;
   padding: 68px 0 62px;
 }
@@ -256,7 +268,8 @@ h1 {
   color: #7b887b;
 }
 .filters {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(0, 160px));
   gap: 10px;
   margin: 10px 0 24px;
 }
@@ -269,6 +282,7 @@ h1 {
   border-radius: 7px;
   padding: 10px 13px;
   gap: 12px;
+  min-width: 0;
 }
 .search > span {
   font-size: 24px;
@@ -278,7 +292,7 @@ h1 {
 .search input {
   border: 0;
   width: 100%;
-  min-width: 70px;
+  min-width: 0;
   background: transparent;
   font-size: 12px;
   outline-offset: 2px;
@@ -290,6 +304,9 @@ h1 {
   border-radius: 3px;
 }
 select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
   color: #465843;
   background: #fff;
   border: 1px solid #d9dfd4;
@@ -333,7 +350,7 @@ select {
 }
 .flow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 35px;
   border-top: 1px solid #dce3d5;
   margin: 48px 0 55px;
@@ -372,7 +389,7 @@ footer b {
 }
 .cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 .card {
@@ -392,6 +409,7 @@ footer b {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 .skill-icon {
   border-radius: 9px;
@@ -447,6 +465,9 @@ footer b {
   grid-template-columns: minmax(0, 1fr) 350px;
   gap: 50px;
   margin-top: 35px;
+}
+.detail-grid > * {
+  min-width: 0;
 }
 .markdown {
   background: #fff;
@@ -518,9 +539,11 @@ footer b {
   font-size: 11px;
   overflow-wrap: anywhere;
   flex: 1;
-  min-width: 150px;
+  min-width: min(150px, 100%);
 }
 .command button {
+  min-height: 44px;
+  max-width: 100%;
   font-size: 10px;
   color: #e3ecd7;
   background: #345443;
@@ -586,16 +609,16 @@ footer b {
     transform: scale(0.9);
   }
   .filters {
-    flex-wrap: wrap;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .search {
-    flex-basis: 100%;
+    grid-column: 1 / -1;
   }
   .cards {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .detail-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 25px;
   }
   .detail-grid aside {
@@ -606,10 +629,21 @@ footer b {
   }
 }
 @media (max-width: 600px) {
+  header,
+  footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  main {
+    padding: 0 16px;
+  }
   header {
-    height: 80px;
+    padding-top: 16px;
+    padding-bottom: 8px;
+    gap: 8px;
   }
   .brand {
+    flex-basis: 100%;
     font-size: 16px;
     gap: 8px;
   }
@@ -618,8 +652,8 @@ footer b {
     height: 30px;
   }
   nav {
-    gap: 14px;
-    font-size: 11px;
+    gap: 24px;
+    font-size: 13px;
   }
   .network {
     display: none;
@@ -632,7 +666,8 @@ footer b {
     display: none;
   }
   h1 {
-    font-size: 29px;
+    font-size: clamp(24px, 5.5vw, 29px);
+    letter-spacing: -0.8px;
   }
   .hero p {
     font-size: 12px;
@@ -640,16 +675,25 @@ footer b {
   .section-heading p {
     display: none;
   }
-  .filters select {
-    flex: 1;
-    min-width: 100px;
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .search input,
+  select {
+    font-size: 16px;
+  }
+  .search kbd {
+    display: none;
   }
   .cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .card {
+    padding: 20px;
   }
   .flow {
     gap: 20px;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .flow > div + div {
     padding: 0;
@@ -668,5 +712,11 @@ footer b {
   }
   .guide h1 {
     font-size: 28px;
+  }
+  .guide-step {
+    gap: 12px;
+  }
+  .install-box {
+    padding: 16px;
   }
 }
