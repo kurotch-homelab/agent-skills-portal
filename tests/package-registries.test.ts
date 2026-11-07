@@ -10,7 +10,7 @@ import {
   syncRegistry,
   combineCatalogs,
 } from "../scripts/sync.ts";
-import { integrity } from "../packages/core/src/index.ts";
+import { integrity, download } from "../packages/core/src/index.ts";
 import {
   temporary,
   registry,
@@ -227,4 +227,60 @@ test("independent catalogs retain lock validation and reject duplicate names", a
   assert.throws(() =>
     combineCatalogs([one, bad], "https://internal.example.test/", overrides),
   );
+});
+
+test("GitHub archive redirects use only the known blob host without forwarding credentials", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+  const requests: { url: string; options: RequestInit | undefined }[] = [];
+  let destination = "https://pkg-npm.githubusercontent.com/blob?signature=test";
+  globalThis.fetch = (async (input: any, options?: RequestInit) => {
+    requests.push({ url: String(input), options });
+    if (requests.length % 2 === 1)
+      return new Response(null, {
+        status: 302,
+        headers: { location: destination },
+      });
+    return new Response("archive");
+  }) as typeof fetch;
+  const url = new URL(
+    "https://npm.pkg.github.com/download/@test/guide/1.0.0/hash",
+  );
+  const bytes = await download(url, {
+    token: "registry-secret",
+    githubPackages: true,
+  });
+  assert.equal(bytes?.toString(), "archive");
+  assert.equal(
+    new Headers(requests[0].options?.headers).get("authorization"),
+    "Bearer registry-secret",
+  );
+  assert.equal(
+    new Headers(requests[1].options?.headers).get("authorization"),
+    null,
+  );
+  assert.equal(requests[1].options?.redirect, "error");
+  for (const bad of [
+    "https://evil.example.test/blob",
+    "http://pkg-npm.githubusercontent.com/blob",
+    "https://user:secret@pkg-npm.githubusercontent.com/blob",
+  ]) {
+    requests.length = 0;
+    destination = bad;
+    await assert.rejects(
+      download(url, { token: "registry-secret", githubPackages: true }),
+    );
+    assert.equal(requests.length, 1);
+  }
+  requests.length = 0;
+  destination = "https://pkg-npm.githubusercontent.com/blob";
+  await assert.rejects(
+    download(new URL("https://other.example.test/download/x"), {
+      token: "registry-secret",
+      githubPackages: true,
+    }),
+  );
+  assert.equal(requests.length, 1);
 });

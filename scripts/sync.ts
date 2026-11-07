@@ -216,6 +216,7 @@ export async function syncRegistry(options: {
       const source = options.packageRegistries?.[selection.name];
       const bytes = (await download(selection.url, {
         token: source ? source.token : options.token,
+        githubPackages: selection.url.origin === "https://npm.pkg.github.com",
       }))!;
       if (integrity(bytes) !== selection.integrity)
         throw new Error("lockfile の integrity が一致しません");
