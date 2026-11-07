@@ -133,6 +133,44 @@ export function lockedPackages(
   return result;
 }
 
+/** Merge independently npm-managed catalogs after validating each lockfile. */
+export function combineCatalogs(
+  inputs: { manifest: unknown; lock: unknown }[],
+  registry: string,
+  packageRegistries: PackageRegistries = {},
+) {
+  const manifest = {
+    private: true as const,
+    dependencies: {} as Record<string, string>,
+  };
+  const packages: Record<string, unknown> = {};
+  for (const input of inputs) {
+    const source = manifestSchema.parse(input.manifest);
+    const overrides = Object.fromEntries(
+      Object.entries(packageRegistries).filter(([name]) =>
+        Object.hasOwn(source.dependencies, name),
+      ),
+    );
+    lockedPackages(input.manifest, input.lock, registry, overrides);
+    for (const [name, range] of Object.entries(source.dependencies)) {
+      if (Object.hasOwn(manifest.dependencies, name))
+        throw new Error(`Duplicate catalog package: ${name}`);
+      manifest.dependencies[name] = range;
+    }
+    for (const [path, entry] of Object.entries(
+      lockSchema.parse(input.lock).packages,
+    )) {
+      if (path !== "") packages[path] = entry;
+    }
+  }
+  const lock = {
+    lockfileVersion: 3,
+    packages: { "": { dependencies: manifest.dependencies }, ...packages },
+  };
+  lockedPackages(manifest, lock, registry, packageRegistries);
+  return { manifest, lock };
+}
+
 export async function syncRegistry(options: {
   registry: string;
   token?: string;

@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { loadPackageRegistries } from "../scripts/registries.ts";
-import { lockedPackages, syncRegistry } from "../scripts/sync.ts";
+import {
+  lockedPackages,
+  syncRegistry,
+  combineCatalogs,
+} from "../scripts/sync.ts";
 import { integrity } from "../packages/core/src/index.ts";
 import {
   temporary,
@@ -179,4 +183,48 @@ test("prepare CLI uses registry configuration and never publishes credentials", 
     assert(!text.includes("test-token"));
     assert(!text.includes("TEST_REGISTRY_TOKEN"));
   }
+});
+
+test("independent catalogs retain lock validation and reject duplicate names", async (t) => {
+  const tmp = await temporary();
+  t.after(tmp.cleanup);
+  const one = lockedFixture(
+    "https://internal.example.test/",
+    (await packageFixture(tmp.path)).bytes,
+  );
+  const two = structuredClone(one);
+  two.manifest.dependencies = { "@test/second": "^1.0.0" } as any;
+  two.lock.packages = {
+    "": { dependencies: two.manifest.dependencies },
+    "node_modules/@test/second": {
+      ...one.lock.packages["node_modules/@test/guide"],
+      resolved: "https://npm.pkg.github.com/tar/second",
+    },
+  } as any;
+  const overrides = {
+    "@test/second": { registry: "https://npm.pkg.github.com/" },
+  };
+  const combined = combineCatalogs(
+    [one, two],
+    "https://internal.example.test/",
+    overrides,
+  );
+  assert.equal(
+    lockedPackages(
+      combined.manifest,
+      combined.lock,
+      "https://internal.example.test/",
+      overrides,
+    ).length,
+    2,
+  );
+  assert.throws(
+    () => combineCatalogs([one, one], "https://internal.example.test/"),
+    /Duplicate/,
+  );
+  const bad = structuredClone(two);
+  bad.lock.packages[""].dependencies = { "@test/guide": "1.0.0" };
+  assert.throws(() =>
+    combineCatalogs([one, bad], "https://internal.example.test/", overrides),
+  );
 });
