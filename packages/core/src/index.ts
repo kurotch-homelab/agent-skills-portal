@@ -188,14 +188,39 @@ export function checkedUrl(input: string, base?: string): URL {
 
 export async function download(
   url: URL,
-  options: { token?: string; maxBytes?: number; allow404?: boolean } = {},
+  options: {
+    token?: string;
+    maxBytes?: number;
+    allow404?: boolean;
+    githubPackages?: boolean;
+  } = {},
 ): Promise<Buffer | null> {
   checkedUrl(url.href);
-  const response = await fetch(url, {
-    redirect: "error",
+  let response = await fetch(url, {
+    redirect: options.githubPackages ? "manual" : "error",
     signal: AbortSignal.timeout(60_000),
     headers: options.token ? { authorization: `Bearer ${options.token}` } : {},
   });
+  if (
+    options.githubPackages &&
+    [301, 302, 303, 307, 308].includes(response.status)
+  ) {
+    if (
+      url.origin !== "https://npm.pkg.github.com" ||
+      !url.pathname.startsWith("/download/")
+    )
+      throw new Error("Unexpected package redirect origin");
+    const location = response.headers.get("location");
+    if (!location) throw new Error("Missing package redirect location");
+    const target = checkedUrl(location, url.href);
+    if (target.origin !== "https://pkg-npm.githubusercontent.com")
+      throw new Error("Unexpected package redirect destination");
+    // GitHub returns a signed blob URL. Never forward the registry credential.
+    response = await fetch(target, {
+      redirect: "error",
+      signal: AbortSignal.timeout(60_000),
+    });
+  }
   if (options.allow404 && response.status === 404) return null;
   if (!response.ok)
     throw new Error(`${url.origin}${url.pathname}: HTTP ${response.status}`);

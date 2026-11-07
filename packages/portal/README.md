@@ -38,3 +38,22 @@ npm publish --ignore-scripts
 ```
 
 The CLI never executes npm lifecycle scripts. Skill runtime dependencies must be bundled; dependencies, optionalDependencies and peerDependencies must be empty. Package versions are immutable and archive integrity must remain unchanged.
+
+## Package-specific registries
+
+Use `prepare --registries config/registries.json` to select a different registry for a named catalog dependency. Packages omitted from this configuration continue using the site's `registryUrl`. Keep ordinary SemVer dependency ranges and npm-generated lockfiles.
+
+```json
+{
+  "packages": {
+    "@kurotch-homelab/forma-design-system-skill": {
+      "registry": "https://npm.pkg.github.com/",
+      "tokenEnv": "NODE_AUTH_TOKEN"
+    }
+  }
+}
+```
+
+Only the environment variable name is stored. The value is sent only to that package's validated registry URL; redirects are rejected except for a single GitHub Packages archive redirect to `https://pkg-npm.githubusercontent.com`; registry credentials are never forwarded to that signed blob URL. Missing credentials, unregistered package overrides, and tarballs outside the selected registry stop preparation. This private build configuration and its credentials are not copied to the public site config or catalog. npm authentication is configured separately for lockfile updates and `npm ci`. GitHub Actions consumers need package read access and `packages: read`.
+
+For registries that share the same npm scope, keep separate npm projects and `.npmrc` files. For example, keep internal dependencies in `catalog/` and GitHub Packages dependencies in `catalog/github/`, then run `prepare --catalog catalog --additional-catalog catalog/github --registries config/registries.json ...`. Each project retains an npm-generated lockfile. The portal validates each project and merges them in memory; duplicate package names are rejected. Keep registry overrides for all packages in the additional catalog that differ from the site's default registry. Renovate can update each project with its own registry configuration.

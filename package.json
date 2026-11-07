@@ -12,7 +12,7 @@
     "build": "npm run build -w @kurotch-homelab/agent-skills-cli && npm run build -w @kurotch-homelab/agent-skills-portal && node scripts/licenses.mjs",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
-    "check": "npm run typecheck && npm test && npm run build",
+    "check": "npm run typecheck && npm run build && npm test",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "smoke": "node scripts/smoke.mjs"

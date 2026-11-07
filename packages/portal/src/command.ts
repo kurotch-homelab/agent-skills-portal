@@ -2,8 +2,9 @@ import { Command } from "commander";
 import { readFile, writeFile, mkdir, cp, access } from "node:fs/promises";
 import { resolve, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { syncRegistry, lockedPackages } from "../../../scripts/sync.ts";
+import { syncRegistry, combineCatalogs } from "../../../scripts/sync.ts";
 import { siteSchema } from "../../core/src/site.ts";
+import { loadPackageRegistries } from "../../../scripts/registries.ts";
 import {
   catalogSchema,
   emptyCatalog,
@@ -29,7 +30,17 @@ program
   .description("Prepare assets and catalog from npm lockfiles")
   .requiredOption("--config <path>", "Site config JSON")
   .option("--catalog <path>", "Independent npm project", "catalog")
+  .option(
+    "--additional-catalog <path>",
+    "Additional independent npm catalog (repeatable)",
+    (value: string, paths: string[]) => [...paths, value],
+    [],
+  )
   .option("--withdrawals <path>", "Withdrawal policy JSON")
+  .option(
+    "--registries <path>",
+    "Per-package registry and credential environment names",
+  )
   .option(
     "--previous <path>",
     "Local previous catalog; otherwise download from portal",
@@ -40,9 +51,22 @@ program
   )
   .action(async (options) => {
     const site = siteSchema.parse(await json(options.config));
-    const npmManifest = await json(join(options.catalog, "package.json"));
-    const lock = await json(join(options.catalog, "package-lock.json"));
-    lockedPackages(npmManifest, lock, site.registryUrl);
+    const inputs = await Promise.all(
+      [options.catalog, ...options.additionalCatalog].map(
+        async (directory: string) => ({
+          manifest: await json(join(directory, "package.json")),
+          lock: await json(join(directory, "package-lock.json")),
+        }),
+      ),
+    );
+    const packageRegistries = options.registries
+      ? loadPackageRegistries(await json(options.registries))
+      : {};
+    const { manifest: npmManifest, lock } = combineCatalogs(
+      inputs,
+      site.registryUrl,
+      packageRegistries,
+    );
     let previous = emptyCatalog();
     if (options.previous)
       previous = catalogSchema.parse(await json(options.previous));
@@ -72,6 +96,7 @@ program
     await mkdir(output, { recursive: true });
     const catalog = await syncRegistry({
       registry: site.registryUrl,
+      packageRegistries,
       manifest: npmManifest,
       lock,
       withdrawals: options.withdrawals
