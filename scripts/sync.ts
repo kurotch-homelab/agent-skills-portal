@@ -3,6 +3,7 @@ import { resolve, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import semver from "semver";
 import { z } from "zod";
+import type { PackageRegistries } from "./registries.ts";
 
 import {
   catalogSchema,
@@ -63,6 +64,7 @@ export function lockedPackages(
   manifestInput: unknown,
   lockInput: unknown,
   registryInput: string,
+  packageRegistries: PackageRegistries = {},
 ) {
   const manifest = manifestSchema.parse(manifestInput);
   const lock = lockSchema.parse(lockInput);
@@ -86,9 +88,10 @@ export function lockedPackages(
     throw new Error(
       "package.json と lockfile が一致しません。npm install で更新してください",
     );
-  const registry = checkedUrl(
-    registryInput.endsWith("/") ? registryInput : registryInput + "/",
-  );
+  for (const name of Object.keys(packageRegistries)) {
+    if (!Object.hasOwn(manifest.dependencies, name))
+      throw new Error(`Registry override has no catalog dependency: ${name}`);
+  }
   const result = Object.entries(manifest.dependencies).map(([name, range]) => {
     const entry = lock.packages[`node_modules/${name}`];
     if (
@@ -113,6 +116,8 @@ export function lockedPackages(
       !/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(entry.integrity)
     )
       throw new Error("lockfile に resolved と SHA-512 integrity が必要です");
+    const source = packageRegistries[name]?.registry ?? registryInput;
+    const registry = checkedUrl(source.endsWith("/") ? source : source + "/");
     const url = checkedUrl(entry.resolved);
     if (
       url.origin !== registry.origin ||
@@ -131,6 +136,7 @@ export function lockedPackages(
 export async function syncRegistry(options: {
   registry: string;
   token?: string;
+  packageRegistries?: PackageRegistries;
   manifest: unknown;
   lock: unknown;
   withdrawals?: unknown;
@@ -142,6 +148,7 @@ export async function syncRegistry(options: {
     options.manifest,
     options.lock,
     options.registry,
+    options.packageRegistries,
   );
   const withdrawals = withdrawalSchema.parse(
     options.withdrawals ?? { packages: {} },
@@ -168,7 +175,10 @@ export async function syncRegistry(options: {
     if (cached) {
       pkg = structuredClone(old!);
     } else {
-      const bytes = (await download(selection.url, { token: options.token }))!;
+      const source = options.packageRegistries?.[selection.name];
+      const bytes = (await download(selection.url, {
+        token: source ? source.token : options.token,
+      }))!;
       if (integrity(bytes) !== selection.integrity)
         throw new Error("lockfile の integrity が一致しません");
       const inspected = await inspectPackage(bytes);

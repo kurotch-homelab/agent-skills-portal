@@ -38,3 +38,20 @@ npm publish --ignore-scripts
 ```
 
 The CLI never executes npm lifecycle scripts. Skill runtime dependencies must be bundled; dependencies, optionalDependencies and peerDependencies must be empty. Package versions are immutable and archive integrity must remain unchanged.
+
+## Package-specific registries
+
+Use `prepare --registries config/registries.json` to select a different registry for a named catalog dependency. Packages omitted from this configuration continue using the site's `registryUrl`. Keep ordinary SemVer dependency ranges and npm-generated lockfiles.
+
+```json
+{
+  "packages": {
+    "@kurotch-homelab/forma-design-system-skill": {
+      "registry": "https://npm.pkg.github.com/",
+      "tokenEnv": "NODE_AUTH_TOKEN"
+    }
+  }
+}
+```
+
+Only the environment variable name is stored. The value is sent only to that package's validated registry URL; redirects are rejected. Missing credentials, unregistered package overrides, and tarballs outside the selected registry stop preparation. This private build configuration and its credentials are not copied to the public site config or catalog. npm authentication is configured separately for lockfile updates and `npm ci`. GitHub Actions consumers need package read access and `packages: read`.

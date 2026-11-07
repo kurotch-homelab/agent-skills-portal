@@ -4,6 +4,7 @@ import { resolve, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { syncRegistry, lockedPackages } from "../../../scripts/sync.ts";
 import { siteSchema } from "../../core/src/site.ts";
+import { loadPackageRegistries } from "../../../scripts/registries.ts";
 import {
   catalogSchema,
   emptyCatalog,
@@ -31,6 +32,10 @@ program
   .option("--catalog <path>", "Independent npm project", "catalog")
   .option("--withdrawals <path>", "Withdrawal policy JSON")
   .option(
+    "--registries <path>",
+    "Per-package registry and credential environment names",
+  )
+  .option(
     "--previous <path>",
     "Local previous catalog; otherwise download from portal",
   )
@@ -42,7 +47,10 @@ program
     const site = siteSchema.parse(await json(options.config));
     const npmManifest = await json(join(options.catalog, "package.json"));
     const lock = await json(join(options.catalog, "package-lock.json"));
-    lockedPackages(npmManifest, lock, site.registryUrl);
+    const packageRegistries = options.registries
+      ? loadPackageRegistries(await json(options.registries))
+      : {};
+    lockedPackages(npmManifest, lock, site.registryUrl, packageRegistries);
     let previous = emptyCatalog();
     if (options.previous)
       previous = catalogSchema.parse(await json(options.previous));
@@ -72,6 +80,7 @@ program
     await mkdir(output, { recursive: true });
     const catalog = await syncRegistry({
       registry: site.registryUrl,
+      packageRegistries,
       manifest: npmManifest,
       lock,
       withdrawals: options.withdrawals
